@@ -102,4 +102,3 @@ export async function POST(req: NextRequest) {
   // Respond with the cleaned stream and CORS headers
   return setCORSHeaders(new StreamingTextResponse(cleanedStream));
 }
-
