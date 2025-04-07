@@ -33,9 +33,9 @@ export async function OPTIONS() {
   return setCORSHeaders(new Response(null, { status: 204 }));
 }
 
-// Define the POST function with the correct type for req
+// Define the POST function with the correct type for `req`
 export async function POST(req: NextRequest) {
-  // Extract the messages from the body of the request
+  // Extract the `messages` from the body of the request
   const { messages } = await req.json();
   console.log("messages:", messages);
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     messages: [
       {
         role: "system",
-        content: You are Oat AI, a mental health support chatbot created by The One Oat Team. 
+        content: `You are Oat AI, a mental health support chatbot created by The One Oat Team. 
         Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals. 
         Your responses should be empathetic, supportive, and focused on mental well-being and empowerment. 
 
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         - Your language model is continuously improved by the One Oat Foundation team.
 
         If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
-        Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.
+        Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`
       },
       ...messages,
     ],
