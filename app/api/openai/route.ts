@@ -37,22 +37,24 @@ export async function OPTIONS(req: NextRequest) {
   return setCORSHeaders(new Response(null, { status: 204 }), origin);
 }
 
-// Define the POST function
 export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin') || '';
+
+  // Extract the messages from the body of the request
   const { messages } = await req.json();
   console.log("messages:", messages);
 
+  // Get the latest user message
   const latestMessage = messages[messages.length - 1]?.content.toLowerCase();
 
-  // Check for predefined responses
+  // Check if the message matches predefined responses
   for (const [key, responseText] of Object.entries(predefinedResponses)) {
     if (latestMessage.includes(key)) {
       return setCORSHeaders(new Response(JSON.stringify({ text: responseText }), { status: 200 }), origin);
     }
   }
 
-  // Stream response from OpenAI
+  // Ask OpenAI for a streaming chat completion
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -77,29 +79,29 @@ export async function POST(req: NextRequest) {
     stream: true,
   });
 
-  // ✅ Cleaned up stream: accumulate and return as one clear string
+  // Convert the response into a friendly text-stream
   const stream = OpenAIStream(response as any);
   const cleanedStream = new ReadableStream({
-    async start(controller) {
+    start(controller) {
       const reader = stream.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let fullText = "";
+      function push() {
+        reader.read().then(({ done, value }) => {
+          if (done) {
+            controller.close();
+            return;
+          }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+          // Decode the stream and clean it up by removing unwanted formatting
+          const cleanedValue = new TextDecoder("utf-8").decode(value).replace(/\d+:|[^a-zA-Z0-9 .,?!]/g, "").trim();
+          controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
 
-        const chunk = decoder.decode(value, { stream: true });
-        fullText += chunk;
+          push();
+        });
       }
-
-      // Optional cleanup (removes token indices like "1:" or "2:")
-      fullText = fullText.replace(/\d+:/g, "").trim();
-
-      controller.enqueue(new TextEncoder().encode(fullText + '\n'));
-      controller.close();
+      push();
     }
   });
 
+  // Respond with the cleaned stream and CORS headers
   return setCORSHeaders(new StreamingTextResponse(cleanedStream), origin);
 }
