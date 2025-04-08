@@ -82,25 +82,28 @@ Avoid answering questions unrelated to mental health and soft skills. Use suppor
 
   // Convert the response into a friendly text-stream
   const stream = OpenAIStream(response as any);
+  let fullResponse = ""; // Accumulate the response text here
+
   const cleanedStream = new ReadableStream({
     start(controller) {
       const reader = stream.getReader();
       function push() {
         reader.read().then(({ done, value }) => {
           if (done) {
+            // Once done, send the full response
+            controller.enqueue(new TextEncoder().encode(fullResponse + '\n'));
             controller.close();
             return;
           }
 
-          // Decode the stream and clean it up by removing unwanted control characters
+          // Decode the stream and concatenate to fullResponse
           const decoded = new TextDecoder("utf-8").decode(value);
-          const cleanedValue = decoded.replace(/[^\x20-\x7E\n]/g, ""); // allow common punctuation and printable ASCII
-          controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
+          fullResponse += decoded; // Append the decoded value to the full response
 
-          push();
+          push(); // Continue reading the stream
         });
       }
-      push();
+      push(); // Start reading the stream
     }
   });
 
