@@ -37,25 +37,22 @@ export async function OPTIONS(req: NextRequest) {
   return setCORSHeaders(new Response(null, { status: 204 }), origin);
 }
 
-// Define the POST function with the correct type for `req`
+// Define the POST function
 export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin') || '';
-
-  // Extract the `messages` from the body of the request
   const { messages } = await req.json();
   console.log("messages:", messages);
 
-  // Get the latest user message
   const latestMessage = messages[messages.length - 1]?.content.toLowerCase();
 
-  // Check if the message matches predefined responses
+  // Check for predefined responses
   for (const [key, responseText] of Object.entries(predefinedResponses)) {
     if (latestMessage.includes(key)) {
       return setCORSHeaders(new Response(JSON.stringify({ text: responseText }), { status: 200 }), origin);
     }
   }
 
-  // Ask OpenAI for a streaming chat completion
+  // Stream response from OpenAI
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -92,10 +89,13 @@ export async function POST(req: NextRequest) {
             return;
           }
 
-          // Decode the stream and clean it up by removing unwanted formatting
-          const cleanedValue = new TextDecoder("utf-8").decode(value).replace(/\d+:|[^a-zA-Z0-9 .,?!]/g, "").trim();
-          controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
+          // ✅ FIX: Removed over-aggressive cleaning that was breaking words
+          const cleanedValue = new TextDecoder("utf-8")
+            .decode(value)
+            .replace(/\d+:/g, "") // Remove token-like "1:" or "2:"
+            .trim();
 
+          controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
           push();
         });
       }
@@ -103,6 +103,5 @@ export async function POST(req: NextRequest) {
     }
   });
 
-  // Respond with the cleaned stream and CORS headers
   return setCORSHeaders(new StreamingTextResponse(cleanedStream), origin);
 }
