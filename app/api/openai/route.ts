@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
 
   // Convert the response into a friendly text-stream
   const stream = OpenAIStream(response as any);
+  let responseText = ''; // Initialize an empty string to store the complete response
+
   const cleanedStream = new ReadableStream({
     start(controller) {
       const reader = stream.getReader();
@@ -92,20 +94,15 @@ export async function POST(req: NextRequest) {
             return;
           }
 
-          // Decode the stream and clean it up by removing unwanted formatting
-          const rawResponse = new TextDecoder("utf-8").decode(value);
-          console.log("Raw response from OpenAI:", rawResponse); // Log the raw response for debugging
+          // Decode the stream and accumulate the response into a single string
+          const chunk = new TextDecoder("utf-8").decode(value);
+          responseText += chunk; // Concatenate the chunk to the responseText
 
-          // Clean the response by removing unwanted characters, preserving essential punctuation and formatting
-          const cleanedValue = rawResponse
-            .replace(/[^\x20-\x7E\n\r]+/g, '') // Removes non-printable/control chars but keeps text intact
-            .trim(); // Trim unnecessary spaces
+          // Log the responseText for debugging purposes
+          console.log("Accumulated response:", responseText);
 
-          // Log the cleaned value to confirm it's correct
-          console.log("Cleaned response:", cleanedValue);
-
-          // Enqueue the cleaned value for the response stream
-          controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
+          // Send the updated text to the client as a continuous stream
+          controller.enqueue(new TextEncoder().encode(responseText));
 
           push();
         });
