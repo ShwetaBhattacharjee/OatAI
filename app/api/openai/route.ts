@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     messages: [
       {
         role: "system",
-        content: You are Oat AI, a mental health support chatbot created by The One Oat Team. 
+        content: `You are Oat AI, a mental health support chatbot created by The One Oat Team. 
         Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals. 
         Your responses should be empathetic, supportive, and focused on mental well-being and empowerment. 
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         - Your language model is continuously improved by the One Oat Foundation team.
 
         If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
-        Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes or most of the times including supportive emojis. 😊.
+        Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`,
       },
       ...messages,
     ],
@@ -93,7 +93,15 @@ export async function POST(req: NextRequest) {
           }
 
           // Decode the stream and clean it up by removing unwanted formatting
-          const cleanedValue = new TextDecoder("utf-8").decode(value).replace(/\d+:|[^a-zA-Z0-9 .,?!]/g, "").trim();
+          const rawResponse = new TextDecoder("utf-8").decode(value);
+          console.log("Raw response from OpenAI:", rawResponse); // Log the raw response for debugging
+
+          // Clean the response by removing unwanted characters, preserving essential punctuation and formatting
+          const cleanedValue = rawResponse
+            .replace(/\d+:|[^a-zA-Z0-9 .,?!\n\r]/g, "")  // Remove unwanted non-alphanumeric chars except punctuations and spaces
+            .trim(); // Trim unnecessary spaces
+
+          // Enqueue the cleaned value for the response stream
           controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
 
           push();
