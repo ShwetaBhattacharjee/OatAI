@@ -98,8 +98,11 @@ export async function POST(req: NextRequest) {
 
           // Clean the response by removing unwanted characters, preserving essential punctuation and formatting
           const cleanedValue = rawResponse
-            .replace(/\d+:|[^a-zA-Z0-9 .,?!\n\r]/g, "")  // Remove unwanted non-alphanumeric chars except punctuations and spaces
+            .replace(/[^\x20-\x7E\n\r]+/g, '') // Removes non-printable/control chars but keeps text intact
             .trim(); // Trim unnecessary spaces
+
+          // Log the cleaned value to confirm it's correct
+          console.log("Cleaned response:", cleanedValue);
 
           // Enqueue the cleaned value for the response stream
           controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
