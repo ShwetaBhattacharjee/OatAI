@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
         role: "system",
         content: `You are Oat AI, a mental health support chatbot created by The One Oat Team. 
         Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals. 
-        Your responses should be empathetic, supportive, and focused on mental well-being and empowerment. 
+        Your responses should be empathetic, supportive, and focused on mental well-being and empowerment.
 
         Important guidelines:
         - Do not provide medical advice or psychological diagnoses.
@@ -80,37 +80,9 @@ export async function POST(req: NextRequest) {
     stream: true,
   });
 
-  // Convert the response into a friendly text-stream
-  const stream = OpenAIStream(response as any);
-  let responseText = ''; // Initialize an empty string to store the complete response
+  // Convert the response into a friendly text-stream without cleaning it
+  const stream = OpenAIStream(response);
 
-  const cleanedStream = new ReadableStream({
-    start(controller) {
-      const reader = stream.getReader();
-      function push() {
-        reader.read().then(({ done, value }) => {
-          if (done) {
-            controller.close();
-            return;
-          }
-
-          // Decode the stream and accumulate the response into a single string
-          const chunk = new TextDecoder("utf-8").decode(value);
-          responseText += chunk; // Concatenate the chunk to the responseText
-
-          // Log the responseText for debugging purposes
-          console.log("Accumulated response:", responseText);
-
-          // Send the updated text to the client as a continuous stream
-          controller.enqueue(new TextEncoder().encode(responseText));
-
-          push();
-        });
-      }
-      push();
-    }
-  });
-
-  // Respond with the cleaned stream and CORS headers
-  return setCORSHeaders(new StreamingTextResponse(cleanedStream), origin);
+  // Respond with the raw stream and CORS headers
+  return setCORSHeaders(new StreamingTextResponse(stream), origin);
 }
