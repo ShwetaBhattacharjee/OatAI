@@ -77,29 +77,27 @@ export async function POST(req: NextRequest) {
     stream: true,
   });
 
-  // Convert the response into a friendly text-stream
+  // ✅ Cleaned up stream: accumulate and return as one clear string
   const stream = OpenAIStream(response as any);
   const cleanedStream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const reader = stream.getReader();
-      function push() {
-        reader.read().then(({ done, value }) => {
-          if (done) {
-            controller.close();
-            return;
-          }
+      const decoder = new TextDecoder("utf-8");
+      let fullText = "";
 
-          // ✅ FIX: Removed over-aggressive cleaning that was breaking words
-          const cleanedValue = new TextDecoder("utf-8")
-            .decode(value)
-            .replace(/\d+:/g, "") // Remove token-like "1:" or "2:"
-            .trim();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-          controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
-          push();
-        });
+        const chunk = decoder.decode(value, { stream: true });
+        fullText += chunk;
       }
-      push();
+
+      // Optional cleanup (removes token indices like "1:" or "2:")
+      fullText = fullText.replace(/\d+:/g, "").trim();
+
+      controller.enqueue(new TextEncoder().encode(fullText + '\n'));
+      controller.close();
     }
   });
 
