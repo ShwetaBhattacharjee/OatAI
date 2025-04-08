@@ -21,27 +21,21 @@ const predefinedResponses = {
 };
 
 // Handle CORS
-function setCORSHeaders(response: Response | NextResponse, reqOrigin?: string) {
-  const allowedOrigins = ['https://dev.oats.live', 'https://oneoat.org'];
-  if (reqOrigin && allowedOrigins.includes(reqOrigin)) {
-    response.headers.set('Access-Control-Allow-Origin', reqOrigin);
-  }
+function setCORSHeaders(response: Response | NextResponse) {
+  response.headers.set('Access-Control-Allow-Origin', 'https://oneoat.org'); // Your WordPress domain
   response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
   return response;
 }
 
 // Handle OPTIONS request for CORS preflight
-export async function OPTIONS(req: NextRequest) {
-  const origin = req.headers.get('origin') || '';
-  return setCORSHeaders(new Response(null, { status: 204 }), origin);
+export async function OPTIONS() {
+  return setCORSHeaders(new Response(null, { status: 204 }));
 }
 
-// Define the POST function with the correct type for req
+// Define the POST function with the correct type for `req`
 export async function POST(req: NextRequest) {
-  const origin = req.headers.get('origin') || '';
-
-  // Extract the messages from the body of the request
+  // Extract the `messages` from the body of the request
   const { messages } = await req.json();
   console.log("messages:", messages);
 
@@ -49,19 +43,19 @@ export async function POST(req: NextRequest) {
   const latestMessage = messages[messages.length - 1]?.content.toLowerCase();
 
   // Check if the message matches predefined responses
-  for (const [key, responseText] of Object.entries(predefinedResponses)) {
+  for (const [key, response] of Object.entries(predefinedResponses)) {
     if (latestMessage.includes(key)) {
-      return setCORSHeaders(new Response(JSON.stringify({ text: responseText }), { status: 200 }), origin);
+      return setCORSHeaders(new Response(JSON.stringify({ text: response }), { status: 200 }));
     }
   }
 
-  // Ask OpenAI for a streaming chat completion
+  // Ask OpenAI for a streaming chat completion given the prompt
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
-        content: You are Oat AI, a mental health support chatbot created by The One Oat Team. 
+        content: `You are Oat AI, a mental health support chatbot created by The One Oat Team. 
         Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals. 
         Your responses should be empathetic, supportive, and focused on mental well-being and empowerment. 
 
@@ -73,7 +67,7 @@ export async function POST(req: NextRequest) {
         - Your language model is continuously improved by the One Oat Foundation team.
 
         If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
-        Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.
+        Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`
       },
       ...messages,
     ],
@@ -94,6 +88,8 @@ export async function POST(req: NextRequest) {
 
           // Decode the stream and clean it up by removing unwanted formatting
           const cleanedValue = new TextDecoder("utf-8").decode(value).replace(/\d+:|[^a-zA-Z0-9 .,?!]/g, "").trim();
+
+          // Directly enqueue the cleaned text without further splitting it
           controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
 
           push();
@@ -104,5 +100,5 @@ export async function POST(req: NextRequest) {
   });
 
   // Respond with the cleaned stream and CORS headers
-  return setCORSHeaders(new StreamingTextResponse(cleanedStream), origin);
+  return setCORSHeaders(new StreamingTextResponse(cleanedStream));
 }
