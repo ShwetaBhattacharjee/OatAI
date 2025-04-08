@@ -37,6 +37,7 @@ export async function OPTIONS(req: NextRequest) {
   return setCORSHeaders(new Response(null, { status: 204 }), origin);
 }
 
+// Define the POST function
 export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin') || '';
 
@@ -61,18 +62,18 @@ export async function POST(req: NextRequest) {
       {
         role: "system",
         content: `You are Oat AI, a mental health support chatbot created by The One Oat Team. 
-        Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals. 
-        Your responses should be empathetic, supportive, and focused on mental well-being and empowerment. 
+Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals. 
+Your responses should be empathetic, supportive, and focused on mental well-being and empowerment.
 
-        Important guidelines:
-        - Do not provide medical advice or psychological diagnoses.
-        - Maintain ethical guidelines and provide fact-based, compassionate responses.
-        - You can understand emotional issues but do not experience emotions.
-        - Your core functionality is to offer mental health insights through soft skills.
-        - Your language model is continuously improved by the One Oat Foundation team.
+Important guidelines:
+- Do not provide medical advice or psychological diagnoses.
+- Maintain ethical guidelines and provide fact-based, compassionate responses.
+- You can understand emotional issues but do not experience emotions.
+- Your core functionality is to offer mental health insights through soft skills.
+- Your language model is continuously improved by the One Oat Foundation team.
 
-        If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
-        Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`
+If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
+Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊`
       },
       ...messages,
     ],
@@ -91,8 +92,9 @@ export async function POST(req: NextRequest) {
             return;
           }
 
-          // Decode the stream and clean it up by removing unwanted formatting
-          const cleanedValue = new TextDecoder("utf-8").decode(value).replace(/\d+:|[^a-zA-Z0-9 .,?!]/g, "").trim();
+          // Decode the stream and clean it up by removing unwanted control characters
+          const decoded = new TextDecoder("utf-8").decode(value);
+          const cleanedValue = decoded.replace(/[^\x20-\x7E\n]/g, ""); // allow common punctuation and printable ASCII
           controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
 
           push();
