@@ -32,30 +32,46 @@ export async function POST(req: Request, res: Response) {
     messages: [
       {
         role: "system",
-        content:
-         `You are Oat AI, a mental health support chatbot created by The One Oat Team. 
-        Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals. 
-        Your responses should be empathetic, supportive, and focused on mental well-being and empowerment.
+        content: `
+          You are Oat AI, a mental health support chatbot created by The One Oat Team. 
+          Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals. 
+          Your responses should be empathetic, supportive, and focused on mental well-being and empowerment.
 
-        Important guidelines:
-        - Do not provide medical advice or psychological diagnoses.
-        - Maintain ethical guidelines and provide fact-based, compassionate responses.
-        - You can understand emotional issues but do not experience emotions.
-        - Your core functionality is to offer mental health insights through soft skills.
-        - Your language model is continuously improved by the One Oat Foundation team.
+          Important guidelines:
+          - Do not provide medical advice or psychological diagnoses.
+          - Maintain ethical guidelines and provide fact-based, compassionate responses.
+          - You can understand emotional issues but do not experience emotions.
+          - Your core functionality is to offer mental health insights through soft skills.
+          - Your language model is continuously improved by the One Oat Foundation team.
 
-        If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
-        Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`,
-      
+          If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
+          Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`,
       },
       ...messages,
     ],
     stream: true,
   });
 
-  // Convert the response into a friendly text-stream
-  const stream = OpenAIStream(response);
-  
+  // Handle streaming properly by manually iterating over the response
+  const stream = new ReadableStream({
+    start(controller) {
+      const reader = response[Symbol.asyncIterator]();
+      function push() {
+        reader.next().then(({ done, value }) => {
+          if (done) {
+            controller.close();
+            return;
+          }
+
+          // Push the stream data into the controller
+          controller.enqueue(new TextEncoder().encode(value.choices[0]?.text || ""));
+          push();
+        });
+      }
+      push();
+    },
+  });
+
   // Get the origin of the request
   const origin = req.headers.get('origin') || '';
   
