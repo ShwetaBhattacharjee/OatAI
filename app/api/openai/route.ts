@@ -48,12 +48,12 @@ const customResponses: Record<string, string> = {
   "is this just another app or is there a real community": "It’s a real space with real youth sharing real stories. We have weekly peer circles, topic clubs, and creative spaces. Want in?",
   "i want to make new friends": "You’re in the right place. Start by posting anonymously in our Starter Forum or reacting to others’ posts. Low pressure, high support. Want to visit it?",
   "do you have any events or live stuff": "Yes! We host live sessions with youth mentors, game nights, and mental wellness meetups. I can show you what’s coming up.",
-  "i love writing. can i share my story": "We’d love that! The Oat Stories space is built for young voices like yours. Share anonymously or as yourself—it’s your story, your way."
+  "i love writing. can i share my story": "We’d love that! The Oat Stories space is built for young voices like yours. Share anonymously or as yourself—it’s your story, your way.",
 };
 
 // Handle CORS
 function setCORSHeaders(response: Response | NextResponse) {
-  response.headers.set('Access-Control-Allow-Origin', 'https://oneoat.org'); // your WP domain
+  response.headers.set('Access-Control-Allow-Origin', 'https://oneoat.org');
   response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
   return response;
@@ -69,17 +69,17 @@ export async function POST(req: NextRequest) {
   const { messages } = await req.json();
   const latestMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
-  // Check identity questions
+  // Predefined identity Q&A
   for (const [key, response] of Object.entries(predefinedResponses)) {
     if (latestMessage.includes(key)) {
-      return setCORSHeaders(new Response(JSON.stringify({ text: response }), { status: 200 }));
+      return setCORSHeaders(new Response(response, { status: 200 }));
     }
   }
 
-  // Check custom support questions
+  // Custom support replies
   for (const [key, response] of Object.entries(customResponses)) {
     if (latestMessage.includes(key)) {
-      return setCORSHeaders(new Response(JSON.stringify({ text: response }), { status: 200 }));
+      return setCORSHeaders(new Response(response, { status: 200 }));
     }
   }
 
@@ -101,33 +101,13 @@ Important guidelines:
 - Your language model is continuously improved by the One Oat Foundation team.
 
 If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
-Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`
+Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`,
       },
       ...messages,
     ],
     stream: true,
   });
 
-  // Clean and stream response
   const stream = OpenAIStream(response as any);
-  const cleanedStream = new ReadableStream({
-    start(controller) {
-      const reader = stream.getReader();
-      function push() {
-        reader.read().then(({ done, value }) => {
-          if (done) {
-            controller.close();
-            return;
-          }
-
-          const cleanedValue = new TextDecoder("utf-8").decode(value).replace(/\d+:|[^a-zA-Z0-9 .,?!]/g, "").trim();
-          controller.enqueue(new TextEncoder().encode(cleanedValue + '\n'));
-          push();
-        });
-      }
-      push();
-    }
-  });
-
-  return setCORSHeaders(new StreamingTextResponse(cleanedStream));
+  return setCORSHeaders(new StreamingTextResponse(stream));
 }
