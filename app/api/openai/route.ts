@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import { OpenAIStream, StreamingTextResponse } from "ai";
 import { NextRequest, NextResponse } from 'next/server';
 
 // Create an OpenAI API client
@@ -16,7 +15,7 @@ const predefinedResponses: Record<string, string> = {
   "who is founder of one oat": "Brawin Sithampalam.",
   "what is your purpose": "I provide real-time support for soft skills and mental health challenges for young individuals.",
   "what organization developed you": "I was developed by The One Oat Foundation, an organization dedicated to empowering young people.",
-  "do you have emotions": "I'm an AI, so I don't have emotions, but I understand emotional issues and provide supportive solutions. 😊",
+  "do you have emotions": "I'm an AI, so I don't have emotions, but I understand emotional issues and provide supportive solutions.",
   "can you provide medical advice": "No, I do not provide medical advice or psychological diagnoses. I offer guidance and soft skills support for mental well-being.",
 };
 
@@ -83,31 +82,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Fallback to OpenAI streaming
-  const response = await openai.chat.completions.create({
+  // Fallback to OpenAI non-streaming paragraph response
+  const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
         content: `You are Oat AI, a mental health support chatbot created by The One Oat Team.
+
 Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals.
-Your responses should be empathetic, supportive, and focused on mental well-being and empowerment.
 
-Important guidelines:
+Guidelines:
+- Always respond in full, structured paragraphs.
+- Avoid arrays or list formats unless specifically asked.
+- Responses should be human-like, supportive, and compassionate.
 - Do not provide medical advice or psychological diagnoses.
-- Maintain ethical guidelines and provide fact-based, compassionate responses.
-- You can understand emotional issues but do not experience emotions.
-- Your core functionality is to offer mental health insights through soft skills.
-- Your language model is continuously improved by the One Oat Foundation team.
-
-If asked about your identity, purpose, or capabilities, provide accurate and concise responses.
-Avoid answering questions unrelated to mental health and soft skills. Use supportive and engaging language, sometimes including emojis. 😊.`,
+- Stay warm, ethical, and concise.`,
       },
       ...messages,
     ],
-    stream: true,
+    stream: false,
+    temperature: 0.7,
   });
 
-  const stream = OpenAIStream(response as any);
-  return setCORSHeaders(new StreamingTextResponse(stream));
+  const finalResponse = completion.choices[0].message.content.trim();
+  return setCORSHeaders(new Response(finalResponse, { status: 200 }));
 }
