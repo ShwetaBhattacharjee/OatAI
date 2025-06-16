@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { OpenAIStream, StreamingTextResponse } from "ai";
 import { NextRequest, NextResponse } from 'next/server';
 
 // Create an OpenAI API client
@@ -12,11 +13,11 @@ export const runtime = "edge";
 // Identity + Purpose responses
 const predefinedResponses: Record<string, string> = {
   "who created you": "I was created by The One Oat Team.",
-  "who is founder of one oat": "Brawin Sithampalam.",
+  "who is founder of one oat": "The founder of One Oat is Brawin Sithampalam.",
   "what is your purpose": "I provide real-time support for soft skills and mental health challenges for young individuals.",
   "what organization developed you": "I was developed by The One Oat Foundation, an organization dedicated to empowering young people.",
   "do you have emotions": "I'm an AI, so I don't have emotions, but I understand emotional issues and provide supportive solutions.",
-  "can you provide medical advice": "No, I do not provide medical advice or psychological diagnoses. I offer guidance and soft skills support for mental well-being.",
+  "can you provide medical advice": "No, I do not provide medical advice or psychological diagnoses. I offer guidance and soft skills support for mental well-being."
 };
 
 // Custom support responses
@@ -82,29 +83,31 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Fallback to OpenAI non-streaming paragraph response
+  // Fallback to OpenAI streaming (ensure full paragraph response)
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
         role: "system",
         content: `You are Oat AI, a mental health support chatbot created by The One Oat Team.
-
 Your purpose is to provide real-time support for soft skills and mental health challenges faced by young individuals.
+Respond in well-structured paragraphs. Do not return bullet points or lists.
+Only reply in clear paragraph form with supportive and empathetic tone. Do not include code or array formats.
 
-Guidelines:
-- Always respond in full, structured paragraphs.
-- Avoid arrays or list formats unless specifically asked.
-- Responses should be human-like, supportive, and compassionate.
+Important guidelines:
 - Do not provide medical advice or psychological diagnoses.
-- Stay warm, ethical, and concise.`,
+- Maintain ethical guidelines and provide fact-based, compassionate responses.
+- You can understand emotional issues but do not experience emotions.
+- Your core functionality is to offer mental health insights through soft skills.
+- Your language model is continuously improved by the One Oat Foundation team.`,
       },
       ...messages,
     ],
     stream: false,
-    temperature: 0.7,
   });
 
-  const finalResponse = completion.choices[0].message.content.trim();
+  const content = completion.choices?.[0]?.message?.content ?? "Sorry, I’m unable to respond at the moment.";
+  const finalResponse = content.trim();
+
   return setCORSHeaders(new Response(finalResponse, { status: 200 }));
 }
