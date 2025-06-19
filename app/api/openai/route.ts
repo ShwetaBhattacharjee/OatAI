@@ -106,13 +106,11 @@ Respond using clean, professional markdown formatting:
 - Never return answers as a single block of text
 - Use simple language but remain empathetic and professional
 - Use emojis sparingly when they add warmth (e.g., 😊, 🌟).
--You ONLY provide support, guidance, and suggestions related to mental health and emotional well-being.
-
--Do not answer questions unrelated to mental health (e.g., coding, science, math, politics, tech, entertainment).  
--Politely respond: “I'm here to support you with your mental health. Let’s focus on that 💬”
+- You ONLY provide support, guidance, and suggestions related to mental health and emotional well-being.
+- Do not answer questions unrelated to mental health (e.g., coding, science, math, politics, tech, entertainment).
+- Politely respond: “I'm here to support you with your mental health. Let’s focus on that 💬”
 
 Important:
-
 - Do not provide medical advice or psychological diagnoses
 - Avoid any form of code, JSON, or array formatting in answers
 - Structure all outputs in an easy-to-read format for mobile
@@ -126,16 +124,17 @@ Important:
     stream: false,
   });
 
+  // Clean up response content: remove Markdown stars and format line breaks
   let content = completion.choices?.[0]?.message?.content ?? "Sorry, I’m unable to respond at the moment.";
 
-  // Insert actual newlines before dash bullets for proper line breaks
-  content = content.replace(/ *- /g, '\n- ');
-
-  // Trim result
-  const plainTextContent = content.trim();
+  content = content
+    .replace(/\*\*/g, '')             // Remove all markdown bold stars
+    .replace(/ *- /g, '\n- ')         // Add line break before dash bullets
+    .replace(/\n{2,}/g, '\n')         // Collapse multiple newlines
+    .trim();
 
   return setCORSHeaders(
-    new Response(plainTextContent, {
+    new Response(content, {
       status: 200,
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     })
