@@ -1,25 +1,24 @@
 import OpenAI from "openai";
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-// Create an OpenAI API client
+// Create OpenAI API client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
 });
 
-// IMPORTANT! Set the runtime to edge
 export const runtime = "edge";
 
-// Identity + Purpose responses
+// Predefined identity/purpose replies
 const predefinedResponses: Record<string, string> = {
   "who created you": "I was created by The One Oat Team.",
   "who is founder of one oat": "The founder of One Oat is Brawin Sithampalam.",
   "what is your purpose": "I provide real-time support for soft skills and mental health challenges for young individuals.",
   "what organization developed you": "I was developed by The One Oat Foundation, an organization dedicated to empowering young people.",
   "do you have emotions": "I'm an AI, so I don't have emotions, but I understand emotional issues and provide supportive solutions.",
-  "can you provide medical advice": "No, I do not provide medical advice or psychological diagnoses. I offer guidance and soft skills support for mental well-being."
+  "can you provide medical advice": "No, I do not provide medical advice or psychological diagnoses. I offer guidance and soft skills support for mental well-being.",
 };
 
-// Custom support responses
+// Custom mental health responses
 const customResponses: Record<string, string> = {
   "i can't stop overthinking": "You're not alone—our Mindfulness Moments help you slow down and regain control of your thoughts. Try a 3-minute breathing session. Want to begin now?",
   "does one oat help with anxiety": "We go beyond advice. You can access mindfulness audio sessions, guided journaling, and a community that understands you. Let’s start a calming session together?",
@@ -43,39 +42,47 @@ const customResponses: Record<string, string> = {
   "i love writing. can i share my story": "We’d love that! The Oat Stories space is built for young voices like yours. Share anonymously or as yourself—it’s your story, your way.",
 };
 
-// Handle CORS
+// CORS headers
 function setCORSHeaders(response: Response | NextResponse) {
-  response.headers.set('Access-Control-Allow-Origin', 'https://oneoat.org');
-  response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  response.headers.set("Access-Control-Allow-Origin", "https://oneoat.org");
+  response.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
   return response;
 }
 
-// Handle OPTIONS
+// Handle preflight requests
 export async function OPTIONS() {
-  return setCORSHeaders(new Response(null, { status: 204 }));
+  const response = new Response(null, { status: 204 });
+  response.headers.set("Content-Type", "text/html; charset=utf-8");
+  return setCORSHeaders(response);
 }
 
-// Handle POST
+// POST handler
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
   const latestMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
 
-  // Predefined responses
+  // Check for predefined responses
   for (const [key, response] of Object.entries(predefinedResponses)) {
     if (latestMessage.includes(key)) {
-      return setCORSHeaders(new Response(response, { status: 200 }));
+      return setCORSHeaders(new Response(response, {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }));
     }
   }
 
-  // Custom support replies
+  // Check for custom mental health responses
   for (const [key, response] of Object.entries(customResponses)) {
     if (latestMessage.includes(key)) {
-      return setCORSHeaders(new Response(response, { status: 200 }));
+      return setCORSHeaders(new Response(response, {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }));
     }
   }
 
-  // Fallback to OpenAI
+  // Otherwise use OpenAI
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -101,8 +108,6 @@ Important:
 - Do not provide medical advice or psychological diagnoses
 - Avoid any form of code, JSON, or array formatting in answers
 - Structure all outputs in an easy-to-read format for mobile
-
-Your goal is to feel like a helpful peer with professional support language.
         `,
       },
       ...messages,
@@ -112,8 +117,11 @@ Your goal is to feel like a helpful peer with professional support language.
 
   const content = completion.choices?.[0]?.message?.content ?? "Sorry, I’m unable to respond at the moment.";
 
-  // Replace line breaks for HTML rendering in WordPress
+  // Replace \n with <br> for WordPress
   const formattedContent = content.trim().replace(/\n/g, "<br>");
 
-  return setCORSHeaders(new Response(formattedContent, { status: 200 }));
+  return setCORSHeaders(new Response(formattedContent, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  }));
 }
