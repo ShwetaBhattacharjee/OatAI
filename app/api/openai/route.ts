@@ -65,20 +65,24 @@ export async function POST(req: NextRequest) {
   // Check for predefined responses
   for (const [key, response] of Object.entries(predefinedResponses)) {
     if (latestMessage.includes(key)) {
-      return setCORSHeaders(new Response(response, {
-        status: 200,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      }));
+      return setCORSHeaders(
+        new Response(response, {
+          status: 200,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        })
+      );
     }
   }
 
   // Check for custom mental health responses
   for (const [key, response] of Object.entries(customResponses)) {
     if (latestMessage.includes(key)) {
-      return setCORSHeaders(new Response(response, {
-        status: 200,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      }));
+      return setCORSHeaders(
+        new Response(response, {
+          status: 200,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        })
+      );
     }
   }
 
@@ -110,22 +114,23 @@ Important:
 - Structure all outputs in an easy-to-read format for mobile
         `,
       },
-      ...messages,
+      {
+        role: "user",
+        content: latestMessage,
+      },
     ],
     stream: false,
   });
 
   const content = completion.choices?.[0]?.message?.content ?? "Sorry, I’m unable to respond at the moment.";
 
-  // Replace \n with <br> for WordPress
- const formattedContent = content
-  .trim()
-  .replace(/\n{2,}/g, "<br><br>") // double line breaks → paragraph break
-  .replace(/\n/g, "<br>");        // single line break → line break
+  // Return plain text with actual new lines (no <br>)
+  const plainTextContent = content.trim();
 
-
-  return setCORSHeaders(new Response(formattedContent, {
-    status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  }));
+  return setCORSHeaders(
+    new Response(plainTextContent, {
+      status: 200,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    })
+  );
 }
