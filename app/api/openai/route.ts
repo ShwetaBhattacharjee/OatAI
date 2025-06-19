@@ -122,9 +122,12 @@ Important:
     stream: false,
   });
 
-  const content = completion.choices?.[0]?.message?.content ?? "Sorry, I’m unable to respond at the moment.";
+  let content = completion.choices?.[0]?.message?.content ?? "Sorry, I’m unable to respond at the moment.";
 
-  // Return plain text with actual new lines (no <br>)
+  // Insert actual newlines before dash bullets for proper line breaks
+  content = content.replace(/ *- /g, '\n- ');
+
+  // Trim result
   const plainTextContent = content.trim();
 
   return setCORSHeaders(
