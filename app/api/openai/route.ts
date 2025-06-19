@@ -118,7 +118,11 @@ Important:
   const content = completion.choices?.[0]?.message?.content ?? "Sorry, I’m unable to respond at the moment.";
 
   // Replace \n with <br> for WordPress
-  const formattedContent = content.trim().replace(/\n/g, "<br>");
+ const formattedContent = content
+  .trim()
+  .replace(/\n{2,}/g, "<br><br>") // double line breaks → paragraph break
+  .replace(/\n/g, "<br>");        // single line break → line break
+
 
   return setCORSHeaders(new Response(formattedContent, {
     status: 200,
